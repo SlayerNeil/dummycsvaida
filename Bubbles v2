@@ -1,0 +1,139 @@
+!pip install plotly
+
+import plotly.graph_objects as go
+
+import pandas as pd
+
+url = "https://raw.githubusercontent.com/SlayerNeil/dummycsvaida/main/Data2.csv"
+dataset = pd.read_csv(url)
+
+# make list of dates
+dates = []
+for date in dataset["Date"]:
+    if date not in dates:
+        dates.append(date)
+
+# make list of sectors
+sectors = []
+for sector in dataset["Sector"]:
+    if sector not in sectors:
+        sectors.append(sector)
+        
+# make figure
+fig_dict = {
+    "data": [],
+    "layout": {},
+    "frames": []
+}
+
+# fill in most of layout
+fig_dict["layout"]["xaxis"] = {"range": [-10, 10], "title": "Change in Price"}
+fig_dict["layout"]["yaxis"] = {"range": [-0.05, 0.15], "title": "Volatility"}
+fig_dict["layout"]["hovermode"] = "closest"
+fig_dict["layout"]["updatemenus"] = [
+    {
+        "buttons": [
+            {
+                "args": [None, {"frame": {"duration": 500, "redraw": False},
+                                "fromcurrent": True, "transition": {"duration": 300,
+                                                                    "easing": "quadratic-in-out"}}],
+                "label": "Play",
+                "method": "animate"
+            },
+            {
+                "args": [[None], {"frame": {"duration": 0, "redraw": False},
+                                  "mode": "immediate",
+                                  "transition": {"duration": 0}}],
+                "label": "Pause",
+                "method": "animate"
+            }
+        ],
+        "direction": "left",
+        "pad": {"r": 10, "t": 87},
+        "showactive": False,
+        "type": "buttons",
+        "x": 0.1,
+        "xanchor": "right",
+        "y": 0,
+        "yanchor": "top"
+    }
+]
+
+sliders_dict = {
+    "active": 0,
+    "yanchor": "top",
+    "xanchor": "left",
+    "currentvalue": {
+        "font": {"size": 20},
+        "prefix": "date:",
+        "visible": True,
+        "xanchor": "right"
+    },
+    "transition": {"duration": 300, "easing": "cubic-in-out"},
+    "pad": {"b": 10, "t": 50},
+    "len": 0.9,
+    "x": 0.1,
+    "y": 0,
+    "steps": []
+}
+
+# make data
+date = 44235
+for sector in sectors:
+    dataset_by_date = dataset[dataset["Date"] == date]
+    dataset_by_date_and_sect = dataset_by_date[
+        dataset_by_date["Sector"] == sector]
+
+    data_dict = {
+        "x": list(dataset_by_date_and_sect["%Change"]*100),
+        "y": list(dataset_by_date_and_sect["Volatility"]),
+        "mode": "markers",
+        "text": list(dataset_by_date_and_sect["Sector"]),
+        "marker": {
+            "sizemode": "area",
+            "sizemin": 10,
+            "size": list(dataset_by_date_and_sect["Volume"]**2)
+        },
+        "name": sector
+    }
+    fig_dict["data"].append(data_dict)
+
+# make frames
+for date in dates:
+    frame = {"data": [], "name": str(date)}
+    for sector in sectors:
+        dataset_by_date = dataset[dataset["Date"] == int(date)]
+        dataset_by_date_and_sect = dataset_by_date[
+            dataset_by_date["Sector"] == sector]
+
+        data_dict = {
+            "x": list(dataset_by_date_and_sect["%Change"]*100),
+            "y": list(dataset_by_date_and_sect["Volatility"]),
+            "mode": "markers",
+            "text": list(dataset_by_date_and_sect["Sector"]),
+            "marker": {
+                "sizemode": "area",
+                "sizemin": 10,
+                "size": list(dataset_by_date_and_sect["Volume"]**2)
+            },
+            "name": sector
+        }
+        frame["data"].append(data_dict)
+
+    fig_dict["frames"].append(frame)
+    slider_step = {"args": [
+        [date],
+        {"frame": {"duration": 300, "redraw": False},
+         "mode": "immediate",
+         "transition": {"duration": 300}}
+    ],
+        "label": date,
+        "method": "animate"}
+    sliders_dict["steps"].append(slider_step)
+
+
+fig_dict["layout"]["sliders"] = [sliders_dict]
+
+fig = go.Figure(fig_dict)
+
+fig.show()
